@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  telegram-summarizer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram-summarizer
+    volumes:
+      - telegram-data:/app/data
+    stdin_open: true
+    tty: true
+
+volumes:
+  telegram-data:
+    driver: local

@@ -1,0 +1,11 @@
+[project]
+name = "telegram-summarizer"
+version = "0.1.0"
+authors = [
+    { name = "LLM", email = "noname@gmail.com" },
+]
+
+description = "Telegram Summarizer is a Python lib that summarizes messages from Telegram channels."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
