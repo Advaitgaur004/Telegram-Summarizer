@@ -1,8 +1,6 @@
 FROM python:3.9-slim
 
-RUN apt-get update && apt-get install -y curl
-RUN curl -L https://ollama.com/download/ollama-linux-amd64 -o /usr/local/bin/ollama && \
-    chmod +x /usr/local/bin/ollama
+# We don't need Ollama in the container since we'll use the host's instance
 
 WORKDIR /app
 
@@ -10,10 +8,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY main.py .
-COPY config.ini.example config.ini
-COPY entrypoint.sh .
+COPY config.example.ini config.ini
+COPY entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
 
-EXPOSE 11434
+# No need to expose port 11434 as we'll use the host's Ollama
 
 ENTRYPOINT ["/app/entrypoint.sh"]
