@@ -124,63 +124,116 @@ def ensure_ollama_running():
                     print("❌ Failed to start Ollama service. Please check your installation.")
                     sys.exit(1)
 
-def ensure_model_pulled():
-    """Make sure the deepseek-r1 model is downloaded"""
-    print("Checking for deepseek-r1 model...")
+def get_best_available_model():
+    """Get the best available Ollama model"""
+    print("Checking for available Ollama models...")
     
     try:
         response = requests.get("http://localhost:11434/api/tags")
         models = response.json().get("models", [])
         model_names = [model.get("name") for model in models]
         
-        if "deepseek-r1:latest" not in model_names:
-            print("Downloading deepseek-r1 model (this may take a while)...")
-            subprocess.run(["ollama", "pull", "deepseek-r1:latest"], check=True)
-            print("✓ deepseek-r1 model downloaded successfully")
-        else:
-            print("✓ deepseek-r1 model is already downloaded")
+        if not model_names:
+            print("No models found. Downloading llama3.2:3b (recommended for summarization)...")
+            subprocess.run(["ollama", "pull", "llama3.2:3b"], check=True)
+            print("✓ llama3.2:3b model downloaded successfully")
+            return "llama3.2:3b"
+        
+        # Priority list of preferred models
+        preferred_models = [
+            "llama3.1:70b", "llama3.1:8b", "llama3.2:3b", "llama3:8b", "llama3:7b",
+            "mistral:7b", "deepseek-r1:latest", "qwen2:7b", "gemma:7b"
+        ]
+        
+        # Find the best available model
+        for preferred in preferred_models:
+            if preferred in model_names:
+                print(f"✓ Using model: {preferred}")
+                return preferred
+        
+        # Use the first available model if none of the preferred ones are found
+        selected = model_names[0]
+        print(f"✓ Using model: {selected}")
+        return selected
+        
     except Exception as e:
-        print(f"❌ Error checking/pulling the model: {str(e)}")
+        print(f"❌ Error checking models: {str(e)}")
         sys.exit(1)
 
-def generate_summary(input_file):
-    """Use Ollama with deepseek-r1 to summarize the text file"""
-    print("\n🤖 Generating summary with DeepSeek-R1 model...")
+def generate_summary(input_file, model_name):
+    """Use Ollama to summarize the text file"""
+    print(f"\n🤖 Generating summary with {model_name} model...")
     
     try:
         # Read the content of the file
         with open(input_file, 'r', encoding='utf-8') as f:
             content = f.read()
             
+        # Limit content to avoid token limits
+        max_chars = 15000  # Roughly 3-4k tokens
+        if len(content) > max_chars:
+            content = content[:max_chars] + "\n\n[Content truncated due to length...]"
+            print(f"⚠️ Content truncated to {max_chars} characters to fit model limits")
+            
         # Define the prompt for summarization
-        prompt = f"""
-        Please provide a concise summary of the following Telegram chat conversation.
-        Focus on the main topics discussed, key decisions made, and important information shared.
-        
-        The summary should be well-structured and highlight what's most important.
-        
-        --- CONVERSATION START ---
-        {content[:50000]}  # Limit to 50k chars to avoid token limits
-        --- CONVERSATION END ---
-        """
+        prompt = f"""Analyze the following Telegram chat conversation and provide a concise summary that focuses ONLY on important information. 
+
+IGNORE:
+- Casual greetings, small talk, jokes, memes
+- Off-topic discussions, random chatter
+- Repetitive messages or spam
+- Personal conversations not relevant to main topics
+
+INCLUDE ONLY:
+- Important decisions made
+- Key information shared (facts, data, announcements)
+- Action items and deadlines
+- Problem discussions and solutions
+- Meeting schedules and important events
+- Technical discussions and conclusions
+- Business/work-related updates
+
+Format the summary as bullet points under relevant categories. If there's nothing important to summarize, just say "No significant information found in this conversation."
+
+Conversation:
+{content}
+
+Important Summary:"""
         
         # Send request to Ollama API
         response = requests.post(
             "http://localhost:11434/api/generate",
             json={
-                "model": "deepseek-r1:latest",
+                "model": model_name,
                 "prompt": prompt,
-                "stream": False
-            }
+                "stream": False,
+                "options": {
+                    "temperature": 0.2,  # Lower temperature for more focused summaries
+                    "top_p": 0.8,        # More focused token selection
+                    "num_predict": 800,  # Limit response length for conciseness
+                    "repeat_penalty": 1.1  # Avoid repetition
+                }
+            },
+            timeout=120
         )
         
         if response.status_code == 200:
-            summary = response.json().get("response", "")
+            result = response.json()
+            summary = result.get("response", "").strip()
             
-            # Write summary to file
-            summary_file = input_file.replace(".txt", "_summary.txt")
+            if not summary:
+                print("❌ Model returned empty response")
+                return None
+            
+            # Write summary to summary.txt (as requested)
+            summary_file = "summary.txt"
             with open(summary_file, 'w', encoding='utf-8') as f:
+                f.write(f"Chat Summary Generated on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Model Used: {model_name}\n")
+                f.write(f"Source File: {input_file}\n")
+                f.write("="*80 + "\n\n")
                 f.write(summary)
+                f.write("\n\n" + "="*80)
             
             print(f"\n✅ Summary generated and saved to {summary_file}")
             
@@ -196,9 +249,13 @@ def generate_summary(input_file):
             print("\n" + "="*80)
             return summary_file
         else:
-            print(f"❌ Failed to generate summary: {response.text}")
+            print(f"❌ Failed to generate summary. Status: {response.status_code}")
+            print(f"Response: {response.text}")
             return None
             
+    except requests.exceptions.Timeout:
+        print("❌ Request timed out. The model might be too slow or overloaded.")
+        return None
     except Exception as e:
         print(f"❌ Error generating summary: {str(e)}")
         return None
@@ -255,7 +312,7 @@ async def export_to_text(messages, filename):
 async def main():
     # Check and start Ollama if needed
     ensure_ollama_running()
-    ensure_model_pulled()
+    model_name = get_best_available_model()
     
     # Connect to Telegram
     print("\n🔄 Connecting to Telegram...")
@@ -300,7 +357,7 @@ async def main():
         exported_file = await export_to_text(messages, filename)
         
         # Generate summary using Ollama
-        summary_file = generate_summary(exported_file)
+        summary_file = generate_summary(exported_file, model_name)
         
         print("\n🎉 All done! You didn't have to do much, did you?")
         
