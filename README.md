@@ -1,132 +1,240 @@
-# Super Lazy Telegram Chat Summarizer
+# Telegram Chat Summarizer
 
-A Docker-based application for people who are too lazy to summarize their Telegram chats. This tool automatically fetches your Telegram chats and summarizes them using the DeepSeek-R1 AI model.
+A powerful tool for lazy developers who want to automatically fetch and summarize their Telegram chats using local AI models. This application exports chat messages and generates intelligent summaries that filter out casual talk and focus on important information.
 
 ## Features
 
--  One-command setup with Docker
--  Access to all your Telegram chats
--  AI-powered chat summarization with DeepSeek-R1
--  Your data stays local - no cloud services used
+- **Smart AI Summarization**: Uses Ollama models to generate focused summaries
+- **Intelligent Filtering**: Automatically ignores casual talk, memes, and irrelevant chatter
+- **Local Processing**: All data stays on your machine - no cloud services used
+- **Multiple Scripts**: Choose from basic export to full AI-powered summarization
+- **Easy Setup**: Simple configuration with automatic model detection
+- **Privacy First**: Your messages never leave your computer
 
-## Prerequisites
+## Quick Start
 
-- Docker installed on your system
-- A Telegram account
-- API credentials from Telegram (the app will show you how to get these)
+### Prerequisites
 
-## Quick Start for Super Lazy People
+1. **Ollama installed and running**:
+   ```bash
+   # Install Ollama (if not already installed)
+   curl -fsSL https://ollama.com/install.sh | sh
+   
+   # Start Ollama service
+   ollama serve
+   
+   # Pull a model (recommended for summarization)
+   ollama pull llama3.2:3b
+   ```
 
-### Step 1: Pull and run the Docker image
+2. **Python dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Telegram API credentials**:
+   - Visit https://my.telegram.org/auth
+   - Go to 'API Development Tools'
+   - Create a new application
+   - Get your `api_id`, `api_hash`, and `username`
+
+### Basic Usage
 
 ```bash
-docker run -it --name telegram-summarizer telegram-summarizer
+# Run the recommended version with AI summarization
+python working_prototype_2.py
 ```
 
-### Step 2: Follow the prompts
+## Available Scripts
 
-1. The app will show you how to get your Telegram API credentials
-2. Enter your API ID, API hash, and username when prompted
-3. Select a chat to summarize
-4. Enter how many messages to fetch
-5. Wait for the summary to be generated
+### 1. `working_prototype_2.py` (Recommended)
+**Best choice for most users** - Simple, reliable, and includes intelligent AI summarization.
 
-That's it! You'll get a nicely formatted summary of your chat without having to read through everything.
+**Features:**
+- Based on the working prototype
+- Automatic Ollama model detection
+- Generates `summary.txt` as requested
+- **Smart filtering**: Ignores trash talk, memes, casual chatter
+- **Focused summaries**: Only important decisions and information
+- Clean, professional interface
+- Robust error handling
 
-## Building from Source
-
-If you want to build the Docker image yourself:
-
+**Usage:**
 ```bash
-# Clone this repository
-git clone https://github.com/yourusername/telegram-summarizer.git
-cd telegram-summarizer
-
-# Build the Docker image
-docker build -t telegram-summarizer .
-
-# Run the container
-docker run -it --name telegram-summarizer telegram-summarizer
+python working_prototype_2.py
 ```
 
-## First Time Setup
+### 2. `working_prototype.py` (Original)
+**Basic version** - Exports chats to text files without AI summarization.
 
-When you run the application for the first time:
+**Features:**
+- Simple and reliable
+- Exports chat to `.txt` file
+- No AI summarization
 
-1. You'll need to authenticate with Telegram via a code sent to your account
-2. This only happens once - your session is saved for future use
-3. Your API credentials are stored locally in the Docker container
+**Usage:**
+```bash
+python working_prototype.py
+```
+
+### 3. `main.py` (Full-featured)
+**Advanced version** - Feature-rich with enhanced UI and error handling.
+
+**Features:**
+- Enhanced user interface
+- Automatic Ollama management
+- Generates `summary.txt`
+- Comprehensive error handling
+- Model auto-download
+
+**Usage:**
+```bash
+python main.py
+```
+
+## Configuration
+
+### First Run Setup
+1. Run any of the scripts
+2. Enter your Telegram API credentials when prompted:
+   - API ID
+   - API Hash  
+   - Username (without @)
+3. Complete Telegram authentication (one-time setup)
+
+### Config File
+Credentials are saved in `config.ini`:
+```ini
+[Telegram]
+api_id = your_api_id
+api_hash = your_api_hash
+username = your_username
+```
+
+## Ollama Models
+
+The scripts automatically detect and use the best available model. Recommended models for summarization:
+
+**Best Performance:**
+- `llama3.1:70b` (requires powerful hardware)
+- `llama3.1:8b` (good balance)
+
+**Recommended for most users:**
+- `llama3.2:3b` (fast, efficient)
+- `llama3:7b` (good quality)
+
+**Install a model:**
+```bash
+ollama pull llama3.2:3b
+```
+
+## Output Files
+
+### Chat Export
+- **Filename**: `{chat_name}_export_{date}.txt`
+- **Content**: Chronological chat messages with timestamps and sender names
+
+### Summary
+- **Filename**: `summary.txt` (overwrites previous summaries)
+- **Content**: AI-generated summary with metadata including:
+  - Generation timestamp
+  - Model used
+  - Source file
+  - **Intelligent filtering**: Automatically ignores casual talk, memes, greetings
+  - **Focused content**: Only includes important decisions, action items, and key information
+  - **Structured format**: Organized bullet points under relevant categories
 
 ## Troubleshooting
 
-- **Connection issues**: Make sure your internet connection is stable
-- **API errors**: Double-check your Telegram API credentials
-- **Container crashes**: Run with `docker run -it --name telegram-summarizer telegram-summarizer keep-alive` for debugging
+### Common Issues
 
-## Privacy Note
+**1. "Ollama service is not running"**
+```bash
+# Start Ollama
+ollama serve
 
-This application runs completely on your local machine. Your Telegram messages and API credentials never leave your computer. The DeepSeek-R1 model runs locally within the Docker container.
-
-## Original Code (before AI transformation) (Give this a try as well, here local LLM is not used)
-```python
-from telethon import TelegramClient, sync
-from telethon.tl.types import PeerChannel
-import datetime
-import asyncio
-import os
-import configparser
-
-config = configparser.ConfigParser()
-if not os.path.exists('config.ini'):
-    config['Telegram'] = {
-        'api_id': '', # Fill this mf
-        'api_hash': '', # Fill this mf also
-        'username': '' # Still need to fill this mf
-    }
-    
-    with open('config.ini', 'w') as f:
-        config.write(f)
-    print("Created config.ini - please fill in your API credentials")
-    exit()
-else:
-    config.read('config.ini')
-    
-api_id = config['Telegram']['api_id']
-api_hash = config['Telegram']['api_hash']
-username = config['Telegram']['username']
-
-client = TelegramClient(username, api_id, api_hash)
-
-async def main():
-    await client.start()
-    dialogs = await client.get_dialogs()
-    print("available chats:")
-    for i, dialog in enumerate(dialogs):
-        print(f"{i}: {dialog.name} ({dialog.id})")
-    choice = int(input("Enter the number of the chat to summarize: "))
-    chat = dialogs[choice]
-    print(f"selected chat: {chat.name}")
-    limit = int(input("How many recent messages to fetch (default 100): ") or "100")
-    print(f"fetching the {limit} most recent messages...")
-    messages = await client.get_messages(chat, limit=limit)
-
-    filename = f"{chat.name.replace(' ', '_')}_export_{datetime.datetime.now().strftime('%Y%m%d')}.txt"
-    with open(filename, 'w', encoding='utf-8') as f:
-        f.write(f"Chat Export from {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
-        for message in reversed(messages): #oldes first
-            if message.text:
-                sender = message.sender.first_name if hasattr(message.sender, 'first_name') else "Unknown"
-                date = message.date.strftime('%Y-%m-%d %H:%M')
-                f.write(f"[{date}] {sender}: {message.text}\n\n")
-
-    print(f"\nNext steps:")
-    print(f"1. Use the exported file '{filename}' with your preferred LLM")
-    print(f"2. For example: 'claude summarize {filename}'")
-    await client.disconnect()
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# Check if running
+curl http://localhost:11434/api/tags
 ```
+
+**2. "No Ollama models found"**
+```bash
+# Install a model
+ollama pull llama3.2:3b
+
+# List installed models
+ollama list
+```
+
+**3. "Failed to connect to Telegram"**
+- Check internet connection
+- Verify API credentials in `config.ini`
+- Ensure credentials are not empty
+
+**4. "Request timed out"**
+- Model might be too large for your hardware
+- Try a smaller model: `ollama pull llama3.2:3b`
+- Increase timeout in the script if needed
+
+### Performance Tips
+
+**For faster summarization:**
+- Use smaller models (`llama3.2:3b`, `phi3:3.8b`)
+- Limit message count (100-500 messages)
+- Ensure sufficient RAM for the model
+
+**For better quality:**
+- Use larger models (`llama3.1:8b`, `llama3:7b`)
+- Allow more time for generation
+- Use more recent/specific models
+
+## Privacy & Security
+
+- **Local Processing**: All data stays on your machine
+- **No Cloud Services**: Ollama runs locally
+- **Credential Storage**: API credentials stored locally in `config.ini`
+- **Session Management**: Telegram session cached locally for convenience
+
+## Example Workflow
+
+1. **Setup** (one-time):
+   ```bash
+   ollama serve
+   ollama pull llama3.2:3b
+   pip install -r requirements.txt
+   ```
+
+2. **Run summarizer**:
+   ```bash
+   python working_prototype_2.py
+   ```
+
+3. **Follow prompts**:
+   - Enter API credentials (first time only)
+   - Select chat from list
+   - Choose number of messages (default: 100)
+
+4. **Get results**:
+   - `{chat_name}_export_{date}.txt` - Full chat export
+   - `summary.txt` - AI-generated summary
+
+## Recommendations
+
+- **For beginners**: Use `working_prototype_2.py`
+- **For basic export only**: Use `working_prototype.py`  
+- **For advanced features**: Use `main.py`
+- **Model choice**: Start with `llama3.2:3b` for speed, upgrade to `llama3.1:8b` for quality
+- **Message limit**: 100-500 messages for best balance of context and speed
+
+## Support
+
+If you encounter issues:
+
+1. Check this troubleshooting guide
+2. Verify Ollama is running: `ollama list`
+3. Check Python dependencies: `pip install -r requirements.txt`
+4. Ensure config.ini has valid credentials
+5. Try with a smaller model or fewer messages
 
 ## License
 
